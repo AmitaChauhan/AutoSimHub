@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "auto-sim-hub"
+version = "0.1.0"
+description = "AutoSimHub General LLM"
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+openai = "^1.51.0"
+fastapi = "^0.115.0"
+python-dotenv = "^1.0.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
