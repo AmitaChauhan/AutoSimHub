@@ -16,7 +16,11 @@ class Simulation:
             ws3_std=5.0,
             simulation_time=100.0):
         """
-"""
+        Runs the simulation with the given parameters.
+
+        Returns:
+            events: List of tuples (time, event_type, component_id, workstation_id)
+        """
         env = simpy.Environment()
         events = []
         component_id = 0
@@ -24,7 +28,6 @@ class Simulation:
         # Define resources for each workstation
         ws1 = simpy.Resource(env, capacity=1)
         ws2 = simpy.Resource(env, capacity=1)
-        ws2_5 = simpy.Resource(env, capacity=1)
         ws3 = simpy.Resource(env, capacity=1)
 
         def get_positive_normal(mean, std):
@@ -56,17 +59,6 @@ class Simulation:
                 yield env.timeout(proc_time)
                 end_time = env.now
                 events.append((end_time, 'end', cid, 2))
-            
-            pass
-            with ws2_5.request() as request:
-                yield request
-                start_time = env.now
-                events.append((start_time, 'start', cid, 2.5))
-                yield env.timeout(1.0)  # Fixed 1-minute processing
-                end_time = env.now
-                events.append((end_time, 'end', cid, 2.5))
-pass
-
 
             # Workstation 3
             with ws3.request() as request:
