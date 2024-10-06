@@ -21,7 +21,16 @@ TOOL_DESCRIPTIONS = [
         "function": {
             "name": "get_simulation",
             "description": "Get a description of the current simulation",
-            "parameters": {},
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "special_request": {
+                        "type": "string",
+                        "description": "Any aspect of the description of the simulation to describe in more detail.",
+                    }
+                },
+                "required": [],
+            },
         },
     },
     {
@@ -65,8 +74,13 @@ TOOL_DESCRIPTIONS = [
 ]
 
 
-def LLM_GET_SIMULATION_PROMPT():
-    return f"Give a detailed description of the simulation scenario described in {SIM_FILE}. Include all the parameters which can be manipulated while running the simulation. Abstract away the implementation details. Do not include details about how to run the simulation."
+def LLM_GET_SIMULATION_PROMPT(special_request: str = ""):
+    if special_request:
+        special_request = f"Special request: {special_request}"
+    else:
+        special_request = ""
+
+    return f"Give a detailed description of the simulation scenario described in {SIM_FILE}. Include all the parameters which can be manipulated while running the simulation. Abstract away the implementation details. Do not include details about how to run the simulation. {special_request}"
 
 
 def LLM_RUN_SIMULATION_PROMPT(sim_params: str, stats: str):
@@ -77,8 +91,8 @@ def LLM_UPDATE_SIMULATION_PROMPT(new_description: str):
     return f"Update the simulation scenario in {SIM_FILE} with the following description: {new_description}. Update `{SIM_FILE}` in place and return a JSON description of the new parameters. It should be possible to execute the simulation."
 
 
-def get_simulation():
-    return interpreter.chat(LLM_GET_SIMULATION_PROMPT())
+def get_simulation(special_request: str = ""):
+    return interpreter.chat(LLM_GET_SIMULATION_PROMPT(special_request))
 
 
 def run_simulation(

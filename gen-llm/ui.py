@@ -46,7 +46,9 @@ def interact_with_gen_llm(iterations: int = 0):
             logging.info("Tool call detected: %s", tool_call.function.name)
             tool_call_id = tool_call.id
             if tool_call.function.name == "get_simulation":
-                tool_response = SA.get_simulation()
+                tool_response = SA.get_simulation(
+                    **json.loads(tool_call.function.arguments)
+                )
             elif tool_call.function.name == "run_simulation":
                 tool_response = SA.run_simulation(
                     **json.loads(tool_call.function.arguments)
