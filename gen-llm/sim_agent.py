@@ -38,7 +38,7 @@ TOOL_DESCRIPTIONS = [
                     },
                     "stats": {
                         "type": "string",
-                        "description": "The statistics to return from the simulation",
+                        "description": "All statistics to return from the simulation",
                     },
                 },
                 "required": ["sim_params", "stats"],
@@ -70,11 +70,11 @@ def LLM_GET_SIMULATION_PROMPT():
 
 
 def LLM_RUN_SIMULATION_PROMPT(sim_params: str, stats: str):
-    return f"Run the simulation with the following parameters: {sim_params} and return the following statistics: {stats}."
+    return f"Run the simulation by importing {SIM_FILE}, instantiating the `Simulation` object, and calling the `run` method with the given parameters: {sim_params} and return the following statistics: {stats}. If the simulation cannot be run for the given parameters, report it as an error. "
 
 
 def LLM_UPDATE_SIMULATION_PROMPT(new_description: str):
-    return f"Update the simulation scenario in {SIM_FILE} with the following description: {new_description}. Update `{SIM_FILE}` in place and return a JSON description of the new parameters."
+    return f"Update the simulation scenario in {SIM_FILE} with the following description: {new_description}. Update `{SIM_FILE}` in place and return a JSON description of the new parameters. It should be possible to execute the simulation."
 
 
 def get_simulation():
