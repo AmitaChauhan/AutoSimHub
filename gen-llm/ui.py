@@ -45,21 +45,30 @@ def interact_with_gen_llm(iterations: int = 0):
         for tool_call in response.choices[0].message.tool_calls:
             logging.info("Tool call detected: %s", tool_call.function.name)
             tool_call_id = tool_call.id
-            if tool_call.function.name == "get_simulation":
-                tool_response = SA.get_simulation(
-                    **json.loads(tool_call.function.arguments)
-                )
-            elif tool_call.function.name == "run_simulation":
-                tool_response = SA.run_simulation(
-                    **json.loads(tool_call.function.arguments)
-                )
-            elif tool_call.function.name == "update_simulation":
-                tool_response = SA.update_simulation(
-                    **json.loads(tool_call.function.arguments)
-                )
-            else:
-                logging.error("Unknown tool: %s", tool_call.function.name)
-                raise ValueError(f"Unknown tool: {tool_call.function.name}")
+            try:
+                if tool_call.function.name == "get_simulation":
+                    tool_response = SA.get_simulation(
+                        **json.loads(tool_call.function.arguments)
+                    )
+                elif tool_call.function.name == "run_simulation":
+                    tool_response = SA.run_simulation(
+                        **json.loads(tool_call.function.arguments)
+                    )
+                elif tool_call.function.name == "update_simulation":
+                    tool_response = SA.update_simulation(
+                        **json.loads(tool_call.function.arguments)
+                    )
+                else:
+                    logging.error("Unknown tool: %s", tool_call.function.name)
+                    raise ValueError(f"Unknown tool: {tool_call.function.name}")
+            except Exception as e:
+                logging.error("Error in tool call: %s", e)
+                tool_response = [
+                    {
+                        "content": f"Error in tool call: {e}",
+                        "role": "tool",
+                    }
+                ]
 
             logging.info("Tool response: %s", len(tool_response))
 
@@ -73,10 +82,13 @@ def interact_with_gen_llm(iterations: int = 0):
                 else:
                     tool_response_messages.append(resp["content"])
 
+            tool_response_combined = "\n".join(tool_response_messages)
+            logging.info("Tool response: %s", tool_response_combined)
+
             messages.append(
                 {
                     "role": "tool",
-                    "content": "\n".join(tool_response_messages),
+                    "content": tool_response_combined,
                     "tool_call_id": tool_call_id,
                 }
             )

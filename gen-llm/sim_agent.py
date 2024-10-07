@@ -5,14 +5,13 @@ import dotenv
 dotenv.load_dotenv()
 
 SIM_FILE = "sim.py"
+DISPLAY = False
 
 # interpreter.offline = True # Disables online features like Open Procedures
 # interpreter.llm.api_base = "http://localhost:1234/v1" # Point this at any OpenAI compatible server
 
 interpreter.llm.model = "openai/gpt-4o"  # Tells OI to send messages in OpenAI's format
-interpreter.llm.api_key = os.getenv(
-    "OPENAI_API_KEY"
-)  # LiteLLM, which we use to talk to LM Studio, requires this
+interpreter.llm.api_key = os.getenv("OPENAI_API_KEY")
 interpreter.auto_run = True
 
 TOOL_DESCRIPTIONS = [
@@ -92,14 +91,18 @@ def LLM_UPDATE_SIMULATION_PROMPT(new_description: str):
 
 
 def get_simulation(special_request: str = ""):
-    return interpreter.chat(LLM_GET_SIMULATION_PROMPT(special_request))
+    return interpreter.chat(LLM_GET_SIMULATION_PROMPT(special_request), display=DISPLAY)
 
 
 def run_simulation(
     sim_params: str = "default parameters", stats: str = "overall throughput"
 ):
-    return interpreter.chat(LLM_RUN_SIMULATION_PROMPT(sim_params, stats))
+    return interpreter.chat(
+        LLM_RUN_SIMULATION_PROMPT(sim_params, stats), display=DISPLAY
+    )
 
 
 def update_simulation(new_description: str):
-    return interpreter.chat(LLM_UPDATE_SIMULATION_PROMPT(new_description))
+    return interpreter.chat(
+        LLM_UPDATE_SIMULATION_PROMPT(new_description), display=DISPLAY
+    )

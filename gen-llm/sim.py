@@ -76,8 +76,8 @@ class Simulation:
         def arrival_generator(env):
             nonlocal component_id
             while True:
-                inter_arrival = get_positive_normal(arrival_mean, arrival_std)
-                yield env.timeout(inter_arrival)
+                inter_arrival = 5.0
+                inter_arrival = 5.0
                 component_id += 1
                 env.process(component_process(env, component_id))
 
