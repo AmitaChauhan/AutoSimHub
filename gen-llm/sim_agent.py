@@ -5,7 +5,7 @@ import dotenv
 dotenv.load_dotenv()
 
 SIM_FILE = "sim.py"
-DISPLAY = False
+DISPLAY = True
 
 # interpreter.offline = True # Disables online features like Open Procedures
 # interpreter.llm.api_base = "http://localhost:1234/v1" # Point this at any OpenAI compatible server
@@ -106,3 +106,4 @@ def update_simulation(new_description: str):
     return interpreter.chat(
         LLM_UPDATE_SIMULATION_PROMPT(new_description), display=DISPLAY
     )
+
