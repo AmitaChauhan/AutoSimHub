@@ -15,7 +15,7 @@ simpy = "^4.1.1"
 pandas = "^2.2.3"
 graphviz = "^0.20.3"
 numpy = "^2.1.2"
-gradio = "^4.44.1"
+gradio = "*"
 
 
 [build-system]

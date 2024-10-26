@@ -1,93 +1,78 @@
 import gradio as gr
 import json
-import openai
+from openai import OpenAI
+
 import dotenv
 import os
 import logging
+from interpreter import interpreter
 
 dotenv.load_dotenv()
 
-client = openai.OpenAI()
+# Initialize OpenAI client
 
-messages = []
 MAX_ITERATIONS = 5
-
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-from interpreter import interpreter
-import os
-import dotenv
-
-dotenv.load_dotenv()
 
 SIM_FILE = "sim.py"
 DISPLAY = True
-
-# interpreter.offline = True # Disables online features like Open Procedures
-# interpreter.llm.api_base = "http://localhost:1234/v1" # Point this at any OpenAI compatible server
 
 interpreter.llm.model = "openai/gpt-4o"  # Tells OI to send messages in OpenAI's format
 interpreter.llm.api_key = os.getenv("OPENAI_API_KEY")
 interpreter.auto_run = True
 
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
 TOOL_DESCRIPTIONS = [
     {
-        "type": "function",
-        "function": {
-            "name": "get_simulation",
-            "description": "Get a description of the current simulation",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "special_request": {
-                        "type": "string",
-                        "description": "Any aspect of the description of the simulation to describe in more detail.",
-                    }
-                },
-                "required": [],
+        "name": "get_simulation",
+        "description": "Get a description of the current simulation",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "special_request": {
+                    "type": "string",
+                    "description": "Any aspect of the description of the simulation to describe in more detail.",
+                }
             },
+            "required": [],
         },
     },
     {
-        "type": "function",
-        "function": {
-            "name": "run_simulation",
-            "description": "Run the simulation with the given parameters",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "sim_params": {
-                        "type": "object",
-                        "description": "The parameters for the simulation",
-                    },
-                    "stats": {
-                        "type": "string",
-                        "description": "All statistics to return from the simulation",
-                    },
+        "name": "run_simulation",
+        "description": "Run the simulation with the given parameters",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "sim_params": {
+                    "type": "object",
+                    "description": "The parameters for the simulation",
                 },
-                "required": ["sim_params", "stats"],
+                "stats": {
+                    "type": "string",
+                    "description": "All statistics to return from the simulation",
+                },
             },
+            "required": ["sim_params", "stats"],
         },
     },
     {
-        "type": "function",
-        "function": {
-            "name": "update_simulation",
-            "description": "Update the simulation for a new scenario",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "new_description": {
-                        "type": "string",
-                        "description": "The new description for the simulation",
-                    }
-                },
-                "required": ["new_description"],
+        "name": "update_simulation",
+        "description": "Update the simulation for a new scenario",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "new_description": {
+                    "type": "string",
+                    "description": "The new description for the simulation",
+                }
             },
+            "required": ["new_description"],
         },
     },
 ]
@@ -103,7 +88,7 @@ def LLM_GET_SIMULATION_PROMPT(special_request: str = ""):
 
 
 def LLM_RUN_SIMULATION_PROMPT(sim_params: str, stats: str):
-    return f"Run the simulation by importing {SIM_FILE}, instantiating the `Simulation` object, and calling the `run` method with the given parameters: {sim_params} and return the following statistics: {stats}. If the simulation cannot be run for the given parameters, report it as an error. "
+    return f"Run the simulation by importing {SIM_FILE}, instantiating the `Simulation` object, and calling the `run` method with the given parameters: {sim_params} and return the following statistics: {stats}. If the simulation cannot be run for the given parameters, report it as an error."
 
 
 def LLM_UPDATE_SIMULATION_PROMPT(new_description: str):
@@ -128,7 +113,7 @@ def update_simulation(new_description: str):
     )
 
 
-def interact_with_gen_llm(iterations: int = 0):
+def interact_with_gen_llm(messages, iterations=0):
     logging.info(
         "Iterations: %s, # messages: %s",
         iterations,
@@ -138,95 +123,176 @@ def interact_with_gen_llm(iterations: int = 0):
     response = client.chat.completions.create(
         model="gpt-4o",
         messages=messages,
-        tools=TOOL_DESCRIPTIONS,
-        tool_choice="auto",
+        functions=TOOL_DESCRIPTIONS,
+        function_call="auto",
     )
     logging.info("Response received: %s", response)
 
-    if response.choices[0].message.tool_calls:
+    message = response.choices[0].message
+
+    if message.function_call:
+        # Append the assistant's message indicating the function call
         messages.append(
             {
-                "role": "assistant",
-                "tool_calls": response.choices[0].message.tool_calls,
+                "role": message.role,
+                "content": None,
+                "function_call": {
+                    "name": message.function_call.name,
+                    "arguments": message.function_call.arguments,
+                },
             }
         )
-        for tool_call in response.choices[0].message.tool_calls:
-            logging.info("Tool call detected: %s", tool_call.function.name)
-            tool_call_id = tool_call.id
-            try:
-                if tool_call.function.name == "get_simulation":
-                    tool_response = get_simulation(
-                        **json.loads(tool_call.function.arguments)
-                    )
-                elif tool_call.function.name == "run_simulation":
-                    tool_response = run_simulation(
-                        **json.loads(tool_call.function.arguments)
-                    )
-                elif tool_call.function.name == "update_simulation":
-                    tool_response = update_simulation(
-                        **json.loads(tool_call.function.arguments)
-                    )
-                else:
-                    logging.error("Unknown tool: %s", tool_call.function.name)
-                    raise ValueError(f"Unknown tool: {tool_call.function.name}")
-            except Exception as e:
-                logging.error("Error in tool call: %s", e)
-                tool_response = [
-                    {
-                        "content": f"Error in tool call: {e}",
-                        "role": "tool",
-                    }
-                ]
+        tool_name = message.function_call.name
+        tool_args = json.loads(message.function_call.arguments)
+        logging.info("Function call detected: %s", tool_name)
+        try:
+            if tool_name == "get_simulation":
+                tool_response = get_simulation(**tool_args)
+            elif tool_name == "run_simulation":
+                tool_response = run_simulation(**tool_args)
+            elif tool_name == "update_simulation":
+                tool_response = update_simulation(**tool_args)
+            else:
+                logging.error("Unknown tool: %s", tool_name)
+                raise ValueError(f"Unknown tool: {tool_name}")
+        except Exception as e:
+            logging.error("Error in tool call: %s", e)
+            tool_response_content = f"Error in tool call: {e}"
+        else:
+            # Process tool response
+            tool_response_content = "\n".join([r["content"] for r in tool_response])
 
-            logging.info("Tool response: %s", len(tool_response))
+        logging.info("Tool response: %s", tool_response_content)
 
-            tool_response_messages = []
-            for idx, resp in enumerate(tool_response):
-                if idx < len(tool_response) - 1:
-                    tool_response_messages.append(
-                        "\n".join(["> " + x for x in resp["content"].split("\n")])
-                        + "\n\n"
-                    )
-                else:
-                    tool_response_messages.append(resp["content"])
-
-            tool_response_combined = "\n".join(tool_response_messages)
-            logging.info("Tool response: %s", tool_response_combined)
-
-            messages.append(
-                {
-                    "role": "tool",
-                    "content": tool_response_combined,
-                    "tool_call_id": tool_call_id,
-                }
-            )
+        # Append tool response to messages
+        messages.append(
+            {"role": "function", "name": tool_name, "content": tool_response_content}
+        )
 
         logging.info("Calling LLM with updated messages")
         if iterations < MAX_ITERATIONS:
-            return interact_with_gen_llm(iterations=iterations + 1)
+            return interact_with_gen_llm(messages, iterations=iterations + 1)
         else:
             logging.warning("Max iterations reached")
+            return None
     else:
-        messages.append(
-            {"role": "assistant", "content": response.choices[0].message.content}
-        )
-        logging.info("Assistant response: %s", response.choices[0].message.content)
-
-    return response.choices[0].message.content
-
-
-def chat_interface(prompt, history):
-    messages.append({"role": "user", "content": prompt})
-    return interact_with_gen_llm()
+        llm_content = message.content.strip()
+        if llm_content == "":
+            logging.info("Assistant chose not to respond.")
+            return None
+        else:
+            messages.append({"role": message.role, "content": message.content})
+            logging.info("Assistant response: %s", llm_content)
+            return llm_content
 
 
 def chat():
     logging.info("Chat interface initialized")
-    return gr.ChatInterface(
-        fn=chat_interface,
-        title="Gen LLM for Sim Agent",
-        description="This is a chat interface for the Gen LLM for Sim Agent. You can ask the agent to perform various tasks, such as running simulations, updating simulations, or getting simulations. The agent will use the tools provided to perform these tasks. You can also ask the agent to explain the code and the simulations.",
-    )
+    with gr.Blocks(fill_height=True) as demo:
+        gr.Markdown("# Gen LLM for Sim Agent")
+        gr.Markdown(
+            "This is a chat interface for the Gen LLM for Sim Agent. You can ask the agent to perform various tasks, such as running simulations, updating simulations, or getting simulations. The agent will use the tools provided to perform these tasks. You can also ask the agent to explain the code and the simulations."
+        )
+
+        chatbot = gr.Chatbot(
+            type="messages",
+            min_height="600px",
+            show_copy_button=True,
+            layout="panel",
+            scale=1,
+        )
+        messages_state = gr.State([])  # To store the messages in OpenAI format
+        chat_history_state = gr.State(
+            []
+        )  # To store the chat history displayed to the user
+
+        with gr.Row(equal_height=True):
+            role_dropdown = gr.Dropdown(
+                choices=[
+                    "Lead Engineer",
+                    "Simulation Engineer",
+                    "Product Manager",
+                    "Supply Chain Engineer",
+                    "Other",
+                ],
+                value="Other",
+                show_label=False,
+                container=False,
+                scale=1,
+            )
+
+            message_input = gr.Textbox(
+                placeholder="Type your message here...",
+                lines=1,
+                show_label=False,
+                container=False,
+                scale=6,
+            )
+
+            submit_button = gr.Button("Send", variant="primary", scale=1)
+
+        def submit_message(role, message, chat_history, messages):
+            # Format and add the user's message to the chat history and messages
+            formatted_message = f"**[{role}]:** {message}"
+            chat_history.append({"role": "user", "content": formatted_message})
+            messages.append({"role": "user", "content": formatted_message})
+
+            # Call LLM with all messages, but only respond if necessary
+            llm_response = interact_with_gen_llm(messages)
+
+            if llm_response and llm_response.strip():
+                # Format the LLM response and update chat history
+                formatted_llm_response = f"{llm_response}"
+                chat_history.append(
+                    {"role": "assistant", "content": formatted_llm_response}
+                )
+                messages.append({"role": "assistant", "content": llm_response})
+
+            # Clear the input box for the next message
+            return chat_history, messages, gr.update(value="", interactive=True)
+
+        # Button click to submit the message
+        submit_button.click(
+            submit_message,
+            inputs=[role_dropdown, message_input, chat_history_state, messages_state],
+            outputs=[chatbot, messages_state, message_input],
+        )
+
+        # Initialize chat with the system prompt and an initial message from AutoSim
+        def initialize_chat(chat_history, messages):
+            system_prompt = (
+                "You are AutoSim, a helpful assistant that assists users in running simulations and answering questions. "
+                "You should only respond if one of the following is true:\n"
+                "1. The user 'tags' you with '@AutoSim' (case insensitive).\n"
+                "2. There is some ambiguity which you can resolve between the users with different roles.\n"
+                "3. There is discussion about a question which can be answered by running a simulation.\n"
+                "In all other cases, you should not respond, and instead wait for the users to continue their discussions.\n"
+                "When you respond, you should always format your messages as '**[AutoSim]:** <message>'.\n"
+                "If no response is needed, return an empty string."
+            )
+            messages.append({"role": "system", "content": system_prompt})
+
+            initial_message = (
+                "You may now begin your discussion.\n"
+                "You can ask me questions directly by tagging me with '@AutoSim'.\n"
+                "You can request simulations, and updates to the simulation scenario.\n"
+                "I will also respond if there is some ambiguity which I can resolve between the users with different roles or if there is a discussion about a question which can be answered by running a simulation."
+            )
+            chat_history.append(
+                {"role": "assistant", "content": f"**[AutoSim]:** {initial_message}"}
+            )
+            messages.append({"role": "assistant", "content": initial_message})
+
+            return chat_history, messages
+
+        # Load initial chat history and messages on start
+        demo.load(
+            initialize_chat,
+            inputs=[chat_history_state, messages_state],
+            outputs=[chatbot, messages_state],
+        )
+
+    return demo
 
 
 if __name__ == "__main__":
