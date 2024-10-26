@@ -87,7 +87,7 @@ def LLM_RUN_SIMULATION_PROMPT(sim_params: str, stats: str):
 
 
 def LLM_UPDATE_SIMULATION_PROMPT(new_description: str):
-    return f"Update the simulation scenario in {SIM_FILE} with the following description: {new_description}. Update `{SIM_FILE}` in place and return a JSON description of the new parameters. It should be possible to execute the simulation."
+    return f"Update the simulation scenario in {SIM_FILE} with the following description: {new_description}. Update `{SIM_FILE}` in place and return a JSON description of the new parameters. It should be possible to execute the simulation just like before."
 
 
 def get_simulation(special_request: str = ""):
