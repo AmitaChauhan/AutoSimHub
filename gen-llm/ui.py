@@ -240,7 +240,9 @@ def chat():
             # Call LLM with all messages, but only respond if necessary
             llm_response = interact_with_gen_llm(messages)
 
-            if llm_response and llm_response.strip():
+            if llm_response and llm_response.translate(
+                str.maketrans("", "", "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~ \t")
+            ):
                 # Format the LLM response and update chat history
                 formatted_llm_response = f"{llm_response}"
                 chat_history.append(
