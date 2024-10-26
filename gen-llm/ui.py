@@ -88,11 +88,11 @@ def LLM_GET_SIMULATION_PROMPT(special_request: str = ""):
 
 
 def LLM_RUN_SIMULATION_PROMPT(sim_params: str, stats: str):
-    return f"Run the simulation by importing {SIM_FILE}, instantiating the `Simulation` object, and calling the `run` method with the given parameters: {sim_params} and return the following statistics: {stats}. If the simulation cannot be run for the given parameters, report it as an error."
+    return f"Run the simulation by importing {SIM_FILE}, instantiating the `Simulation` object, and calling the `run` method with the given parameters: {sim_params} and return the following statistics: {stats}. If the simulation cannot be run for the given parameters, report it as an error. This is a non-interactive session; DO NOT ask the user for any input."
 
 
 def LLM_UPDATE_SIMULATION_PROMPT(new_description: str):
-    return f"Update the simulation scenario in {SIM_FILE} with the following description: {new_description}. Update `{SIM_FILE}` in place and return a JSON description of the new parameters. It should be possible to execute the simulation just like before."
+    return f"Update the simulation scenario in {SIM_FILE} with the following description: {new_description}. Update `{SIM_FILE}` in place and return a JSON description of the new parameters. It should be possible to execute the simulation just like before. This is a non-interactive session; DO NOT ask the user for any input."
 
 
 def get_simulation(special_request: str = ""):
