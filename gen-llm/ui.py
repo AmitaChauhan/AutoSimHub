@@ -5,6 +5,7 @@ from openai import OpenAI
 import dotenv
 import os
 import logging
+import shutil
 from interpreter import interpreter
 
 dotenv.load_dotenv()
@@ -20,6 +21,7 @@ logging.basicConfig(
 
 
 SIM_FILE = "sim.py"
+SIM_FILE_BACKUP = "sim_backup.py"
 DISPLAY = True
 
 interpreter.llm.model = "openai/gpt-4o"  # Tells OI to send messages in OpenAI's format
@@ -113,6 +115,11 @@ def update_simulation(new_description: str):
     )
 
 
+def reset_simulation():
+    shutil.copy(SIM_FILE_BACKUP, SIM_FILE)
+    return get_simulation()
+
+
 def interact_with_gen_llm(messages, iterations=0):
     logging.info(
         "Iterations: %s, # messages: %s",
@@ -200,6 +207,7 @@ def chat():
             show_copy_button=True,
             layout="panel",
             scale=1,
+            show_copy_all_button=True,
         )
         messages_state = gr.State([])  # To store the messages in OpenAI format
         chat_history_state = gr.State(
@@ -270,16 +278,13 @@ def chat():
                 "3. There is discussion about a question which can be answered by running a simulation.\n"
                 "In all other cases, you should not respond, and instead wait for the users to continue their discussions.\n"
                 "When you respond, you should always format your messages as '**[AutoSim]:** <message>'.\n"
-                "If no response is needed, return an empty string."
+                "If no response is needed, return an empty string.\n\n"
+                "In the course of answering any query or question, always describe all the simulations which were run, why they were run, and the results obtained from them before summarizing the results and answering the user."
             )
             messages.append({"role": "system", "content": system_prompt})
 
-            initial_message = (
-                "You may now begin your discussion.\n"
-                "You can ask me questions directly by tagging me with '@AutoSim'.\n"
-                "You can request simulations, and updates to the simulation scenario.\n"
-                "I will also respond if there is some ambiguity which I can resolve between the users with different roles or if there is a discussion about a question which can be answered by running a simulation."
-            )
+            initial_message = """You may begin your discussion. Tag me with ‘@AutoSim’ to ask questions directly, request simulations, or adjust the simulation scenario. I'll also step in to resolve ambiguities or respond to questions that can be answered by a simulation. You may also request a reset to the original simulation state.
+            """
             chat_history.append(
                 {"role": "assistant", "content": f"**[AutoSim]:** {initial_message}"}
             )
