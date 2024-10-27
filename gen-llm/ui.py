@@ -3,6 +3,7 @@ import json
 from openai import OpenAI
 
 import dotenv
+import base64
 import os
 import logging
 import shutil
@@ -195,15 +196,21 @@ def interact_with_gen_llm(messages, iterations=0):
 
 def chat():
     logging.info("Chat interface initialized")
-    with gr.Blocks(fill_height=True) as demo:
-        gr.Markdown("# Gen LLM for Sim Agent")
+    autosim_logo = base64.b64encode(open("./AutoSimHub.png", "rb").read()).decode()
+
+    with gr.Blocks(fill_height=True, theme=gr.themes.Soft()) as demo:
+
+        with gr.Row(equal_height=True):
+            gr.Markdown(
+                f"# <img src='data:image/png;base64,{autosim_logo}' width='96px' style='vertical-align: middle; display: inline-block;' /> AutoSimHub"
+            )
+
         gr.Markdown(
-            "This is a chat interface for the Gen LLM for Sim Agent. You can ask the agent to perform various tasks, such as running simulations, updating simulations, or getting simulations. The agent will use the tools provided to perform these tasks. You can also ask the agent to explain the code and the simulations."
+            "This is a chat interface for AutoSimHub, a simulation tool for production line modelling. You can ask the agent to perform various tasks, such as running simulations, updating simulations, or getting simulations. The agent will use the tools provided to perform these tasks. You can also ask the agent to explain the code and the simulations."
         )
 
         chatbot = gr.Chatbot(
             type="messages",
-            min_height="600px",
             show_copy_button=True,
             layout="panel",
             scale=1,
@@ -217,11 +224,12 @@ def chat():
         with gr.Row(equal_height=True):
             role_dropdown = gr.Dropdown(
                 choices=[
-                    "Lead Engineer",
-                    "Simulation Engineer",
-                    "Product Manager",
-                    "Supply Chain Engineer",
-                    "Other",
+                    "New Product Introduction Department",
+                    "Design Department",
+                    "Planning Department",
+                    "Production Department",
+                    "Quality Control Department",
+                    "Materials Department" "Other",
                 ],
                 value="Other",
                 show_label=False,
