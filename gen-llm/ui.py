@@ -78,6 +78,13 @@ TOOL_DESCRIPTIONS = [
             "required": ["new_description"],
         },
     },
+    {
+        "name": "reset_simulation",
+        "description": "Reset the simulation to the unmodified version.",
+        "parameters": {
+        },
+    },
+
 ]
 
 
@@ -87,15 +94,37 @@ def LLM_GET_SIMULATION_PROMPT(special_request: str = ""):
     else:
         special_request = ""
 
-    return f"Give a detailed description of the simulation scenario described in {SIM_FILE}. Include all the parameters which can be manipulated while running the simulation. Abstract away the implementation details. Do not include details about how to run the simulation. {special_request}"
+    return f"""Give a detailed description of the simulation scenario described in {SIM_FILE}.
+
+Include all the parameters which can be manipulated while running the simulation.
+Abstract away the implementation details. Do not include details about how to run the simulation.
+
+{special_request}
+"""
 
 
 def LLM_RUN_SIMULATION_PROMPT(sim_params: str, stats: str):
-    return f"Run the simulation by importing {SIM_FILE}, instantiating the `Simulation` object, and calling the `run` method with the given parameters: {sim_params} and return the following statistics: {stats}. If the simulation cannot be run for the given parameters, report it as an error. This is a non-interactive session; DO NOT ask the user for any input."
+    return f"""Run the simulation by importing {SIM_FILE}, instantiating the `Simulation` object, and calling the `run` method with the given parameters:
+
+{sim_params}
+
+and return the following statistics: {stats}.
+
+If the simulation cannot be run for the given parameters, report it as an error.
+This is a non-interactive session; DO NOT ask the user for any input.
+"""
 
 
 def LLM_UPDATE_SIMULATION_PROMPT(new_description: str):
-    return f"Update the simulation scenario in {SIM_FILE} with the following description: {new_description}. Update `{SIM_FILE}` in place, but keep a backup, and return a JSON description of the new parameters. It should be possible to execute the simulation. Verify that the updated simulation can be imported successfully and executed. This is a non-interactive session; DO NOT ask the user for any input."
+    return f"""Update the simulation scenario in {SIM_FILE}.
+
+New description: {new_description}.
+
+Update `{SIM_FILE}` in place and return a JSON description of the new parameters.
+It should be possible to execute the simulation.
+Verify that the updated simulation can be imported successfully and executed.
+This is a non-interactive session; DO NOT ask the user for any input.
+"""
 
 
 def get_simulation(special_request: str = ""):
@@ -160,6 +189,8 @@ def interact_with_gen_llm(messages, iterations=0):
                 tool_response = run_simulation(**tool_args)
             elif tool_name == "update_simulation":
                 tool_response = update_simulation(**tool_args)
+            elif tool_name == "reset_simulation":
+                tool_response = reset_simulation(**tool_args)
             else:
                 logging.error("Unknown tool: %s", tool_name)
                 raise ValueError(f"Unknown tool: {tool_name}")
@@ -229,7 +260,8 @@ def chat():
                     "Planning Department",
                     "Production Department",
                     "Quality Control Department",
-                    "Materials Department" "Other",
+                    "Materials Department",
+                    "Other",
                 ],
                 value="Other",
                 show_label=False,
