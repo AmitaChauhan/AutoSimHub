@@ -3,6 +3,7 @@ import json
 from openai import OpenAI
 
 import dotenv
+import time
 import base64
 import os
 import logging
@@ -81,10 +82,8 @@ TOOL_DESCRIPTIONS = [
     {
         "name": "reset_simulation",
         "description": "Reset the simulation to the unmodified version.",
-        "parameters": {
-        },
+        "parameters": {},
     },
-
 ]
 
 
@@ -147,7 +146,8 @@ def update_simulation(new_description: str):
 
 def reset_simulation():
     shutil.copy(SIM_FILE_BACKUP, SIM_FILE)
-    return get_simulation()
+    # return get_simulation()
+    return "Simulation has been reset"
 
 
 def interact_with_gen_llm(messages, iterations=0):
@@ -190,7 +190,7 @@ def interact_with_gen_llm(messages, iterations=0):
             elif tool_name == "update_simulation":
                 tool_response = update_simulation(**tool_args)
             elif tool_name == "reset_simulation":
-                tool_response = reset_simulation(**tool_args)
+                tool_response = reset_simulation()
             else:
                 logging.error("Unknown tool: %s", tool_name)
                 raise ValueError(f"Unknown tool: {tool_name}")
@@ -231,14 +231,31 @@ def chat():
 
     with gr.Blocks(fill_height=True, theme=gr.themes.Soft()) as demo:
 
+        gr.Markdown(
+            f"# <img src='data:image/png;base64,{autosim_logo}' width='64px' style='vertical-align: middle; display: inline-block;' /> AutoSimHub"
+        )
+
         with gr.Row(equal_height=True):
             gr.Markdown(
-                f"# <img src='data:image/png;base64,{autosim_logo}' width='96px' style='vertical-align: middle; display: inline-block;' /> AutoSimHub"
+                "This is a chat interface for AutoSimHub, a simulation tool for production line modelling. You can ask the agent to perform various tasks, such as running simulations, updating simulations, or getting simulations. The agent will use the tools provided to perform these tasks. You can also ask the agent to explain the code and the simulations."
             )
 
-        gr.Markdown(
-            "This is a chat interface for AutoSimHub, a simulation tool for production line modelling. You can ask the agent to perform various tasks, such as running simulations, updating simulations, or getting simulations. The agent will use the tools provided to perform these tasks. You can also ask the agent to explain the code and the simulations."
-        )
+            with gr.Column(scale=0):
+                # Add a red Reset button to trigger the confirmation dialog
+                reset_button = gr.Button("Reset", variant="stop", scale=0)
+                reset_status = gr.Markdown("")
+
+                def reset_simulation_and_update(progress=gr.Progress()):
+                    progress(0, desc="Resetting...")
+                    reset_simulation()
+                    progress(1, desc="Done")
+                    return gr.update(value="Simulation has been reset")
+
+                reset_button.click(
+                    reset_simulation_and_update,
+                    inputs=[],
+                    outputs=[reset_status],
+                )
 
         chatbot = gr.Chatbot(
             type="messages",
